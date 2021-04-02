@@ -1,3 +1,5 @@
+# Portal 2D - a 2D Python game inspired by the Portal series
+
 import os
 import pygame
 
@@ -45,52 +47,14 @@ def load_map():
         elements = line.split(' ')
         world_map.append(elements)
     return world_map
- 
-# check for block collision in x the plane in constant time
-def left_collision(world_map, player):
-    # floor division, no loops
-    x = (player.x-10) // TILE_SIZE
-    yHi = player.y // TILE_SIZE
-    yMid = (player.y+PLAYER_HEIGHT//2) // TILE_SIZE
-    yLo = (player.y+PLAYER_HEIGHT-1) // TILE_SIZE
-    # Check the top, middle, and low points of the player for collisions
-    if world_map[yHi][x] == '1' or world_map[yMid][x] == '1' or world_map[yLo][x] == '1':
-        player.x += VEL #cancel out velocity if touching block
-def right_collision(world_map, player):
-    x = (player.x+PLAYER_WIDTH) // TILE_SIZE
-    yHi = player.y // TILE_SIZE
-    yMid = (player.y+PLAYER_HEIGHT//2) // TILE_SIZE
-    yLo = (player.y+PLAYER_HEIGHT-1) // TILE_SIZE
-    # Check the top, middle, and low points of the player for collisions
-    if world_map[yHi][x] == '1' or world_map[yMid][x] == '1' or world_map[yLo][x] == '1':
-        player.x -= VEL
-
-# check for block collisions in the y plane in constant time
-def up_collision(world_map, player):
-    xLeft = player.x // TILE_SIZE
-    xMid = (player.x+PLAYER_WIDTH//2) // TILE_SIZE
-    xRight = (player.x+PLAYER_WIDTH-1) // TILE_SIZE
-    y = (player.y-10) // TILE_SIZE
-    # Check the left, middle, and right points of the player for collisions
-    if world_map[y][xLeft] == '1' or world_map[y][xMid] == '1' or world_map[y][xRight] == '1':
-        player.y += VEL
-def down_collision(world_map, player):
-    xLeft = player.x // TILE_SIZE
-    xMid = (player.x+PLAYER_WIDTH//2) // TILE_SIZE
-    xRight = (player.x+PLAYER_WIDTH-1) // TILE_SIZE
-    y = (player.y+PLAYER_HEIGHT) // TILE_SIZE
-    # Check the left, middle, and right points of the player for collisions
-    if world_map[y][xLeft] == '1' or world_map[y][xMid] == '1' or world_map[y][xRight] == '1':
-        player.y -= VEL
 
 # check if the player is going through the blue portal
 def blue_collision(player):
-    # make this easier by making a player class with a top, mid, low, etc
     char_mid_x = player.x + PLAYER_WIDTH/2
     char_mid_y = player.y + PLAYER_HEIGHT/2
 
-    hit = False
     # is character colliding with blue portal
+    hit = False
     if char_mid_x >= BLUE_RECT.x and char_mid_x <= BLUE_RECT.x+PORTAL_WIDTH and char_mid_y >= BLUE_RECT.y and char_mid_y <= BLUE_RECT.y+PORTAL_HEIGHT:
         hit = True
     return hit
@@ -100,11 +64,37 @@ def orange_collision(player):
     char_mid_x = player.x + PLAYER_WIDTH/2
     char_mid_y = player.y + PLAYER_HEIGHT/2
 
-    hit = False
     # is the character colliding with orange portal
+    hit = False
     if char_mid_x >= ORG_RECT.x and char_mid_x <= ORG_RECT.x+PORTAL_WIDTH and char_mid_y >= ORG_RECT.y and char_mid_y <= ORG_RECT.y+PORTAL_HEIGHT:
         hit = True
     return hit
+
+# check if the player collided with any blocks in x axis
+def block_x_collision(world_map, x, y):
+    # top, middle, bottom of player
+    x = x // TILE_SIZE
+    y1 = y // TILE_SIZE
+    y2 = (y+PLAYER_HEIGHT//2) // TILE_SIZE
+    y3 = (y+PLAYER_HEIGHT-1) // TILE_SIZE
+    # Check if left, middle, or right points of player is colliding
+    if world_map[y1][x] == '1' or world_map[y2][x] == '1' or world_map[y3][x] == '1':
+        return True
+    else:
+        return False
+
+# check if the player collided with any blocks in y axis
+def block_y_collision(world_map, x, y):
+    # left, middle, and right of player
+    x1 = x // TILE_SIZE
+    x2 = (x+PLAYER_WIDTH//2) // TILE_SIZE
+    x3 = (x+PLAYER_WIDTH-1) // TILE_SIZE
+    y = y // TILE_SIZE
+    # Check if left, middle, or right points of player is colliding
+    if world_map[y][x1] == '1' or world_map[y][x2] == '1' or world_map[y][x3] == '1':
+        return True
+    else:
+        return False
 
 # move the player in the x and y directions
 def move_player(keys_pressed, world_map, player):
@@ -115,44 +105,44 @@ def move_player(keys_pressed, world_map, player):
     if keys_pressed[pygame.K_LEFT] and player.x > 0:
         # flip player left if needed
         if player_direction == 1:
-            print("left")
             PLAYER_RECT = pygame.transform.flip(PLAYER_RECT, True, False)
             player_direction = 0
-        # check if the player collided with the walls or portals
-        left_collision(world_map, player)
+        # check if the player collided with portals
         if blue_collision(player):
             player.x = ORG_RECT.x - PLAYER_WIDTH
             player.y = ORG_RECT.y
         if orange_collision(player):
             player.x = BLUE_RECT.x - PLAYER_WIDTH
             player.y = BLUE_RECT.y
-        # move player
-        player.x -= VEL
+        # if not colliding with blocks, move player
+        if not block_x_collision(world_map, player.x-1, player.y):
+            player.x -= VEL
         
     if keys_pressed[pygame.K_RIGHT] and player.x+PLAYER_WIDTH < WIDTH:
         # flip player right if needed
         if player_direction == 0:
-            print("right")
             PLAYER_RECT = pygame.transform.flip(PLAYER_RECT, True, False)
             player_direction = 1
-        # check if player collided with walls or portals
-        right_collision(world_map, player)
+        # check if player collided with portals
         if blue_collision(player):
             player.x = ORG_RECT.x + PORTAL_WIDTH
             player.y = ORG_RECT.y
         if orange_collision(player):
             player.x = BLUE_RECT.x + PORTAL_WIDTH
             player.y = BLUE_RECT.y
-        # move player
-        player.x += VEL
+        # if not colliding with blocks, move player
+        if not block_x_collision(world_map, player.x+PLAYER_WIDTH, player.y):
+            player.x += VEL
         
     if keys_pressed[pygame.K_UP] and player.y > 0:
-        up_collision(world_map, player)
-        player.y -= VEL
+        # if not colliding with blocks, move player
+        if not block_y_collision(world_map, player.x, player.y-1):
+            player.y -= VEL
        
     if keys_pressed[pygame.K_DOWN] and player.y+PLAYER_HEIGHT < HEIGHT:
-        down_collision(world_map, player)
-        player.y += VEL
+        # if not colliding with blocks, move player
+        if not block_y_collision(world_map, player.x, player.y+PLAYER_HEIGHT):
+            player.y += VEL
 
 # draws the map
 def draw_map(world_map):
@@ -201,19 +191,36 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
+            # move portals if player clicks mouse button
+            # need to implement feature that only allows portals on edge of walls
+            # maybe if x = mouse_pos//60, world_map[x][x] == '1', then place portal
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_click = pygame.mouse.get_pressed()
                 mouse_pos = pygame.mouse.get_pos()
-                if mouse_click[0]:
+                if mouse_click[0]: # left mouse button
                     BLUE_RECT.x = mouse_pos[0]-5
                     BLUE_RECT.y = mouse_pos[1]-PORTAL_WIDTH/2
-                if mouse_click[2]:
+                if mouse_click[2]: # right mouse button
                     ORG_RECT.x = mouse_pos[0]-5
                     ORG_RECT.y = mouse_pos[1]-PORTAL_WIDTH/2
         
         keys_pressed = pygame.key.get_pressed()
         move_player(keys_pressed, world_map, player)
+
+        # DEBUG
+        if keys_pressed[pygame.K_h]:
+            print("-------------------------------------------------")
+            print("top.x, top.y == ", player.x, ", ", player.y)
+            print("mid.x, mid.y == ", player.x, ", ", player.y+PLAYER_HEIGHT//2)
+            print("bottom.x, bottom.y == ", player.x, ", ", player.y+PLAYER_HEIGHT)
+            print("-------------------------------------------------")
+
         draw_window(player, world_map)
 
 if __name__ == "__main__":
     main()
+
+# NOTES
+# for some reason after I teleport through a portal, my x cords get messed up,
+# causing me to clip into blocks and get stuck, and crash if player touches
+# the edge of the screen...
