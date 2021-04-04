@@ -24,6 +24,8 @@ TILE_SIZE = WIDTH//10
 PORTAL_WIDTH, PORTAL_HEIGHT = 9, TILE_SIZE*2
 VEL = 10
 player_direction = 1 # 0 == left, 1 == right
+is_jumping = False
+is_falling = True
 
 # assets
 PLAYER_IMG = pygame.image.load(os.path.join('assets', 'sven.png'))
@@ -156,6 +158,7 @@ def move_player(keys_pressed, world_map, player):
             player.x = BLUE_RECT.x + PORTAL_WIDTH
             player.y = BLUE_RECT.y
         
+    # UP and DOWN will be gone soon, once jump implemented
     if keys_pressed[pygame.K_UP] and player.y > 0:
         # if not colliding with blocks, move player
         if not block_y_collision(world_map, player.x, player.y-1):
@@ -165,6 +168,17 @@ def move_player(keys_pressed, world_map, player):
         # if not colliding with blocks, move player
         if not block_y_collision(world_map, player.x, player.y+PLAYER_HEIGHT):
             player.y += VEL
+
+# should the player be falling?
+def check_gravity(world_map, player):
+    # if y is not colliding with world_map in the y direction, decrement height
+    y = player.y+PLAYER_HEIGHT
+    if y < HEIGHT and block_y_collision(world_map, player.x, y):
+        is_jumping = False
+        is_falling = False
+    if y < HEIGHT and not block_y_collision(world_map, player.x, y):
+        is_falling = True
+        player.y += VEL //2
 
 # draws the map
 def draw_map(world_map):
@@ -188,6 +202,9 @@ def draw_window(player, world_map):
     pygame.display.update()
 
 def main():
+    global is_jumping
+    global is_falling
+
     # world_map = load_map()
     world_map = [
         [ '0', '1', '1', '1', '1', '1', '1', '0', '0', '1'],
@@ -204,6 +221,7 @@ def main():
     
     # Rect(x, y, width, height)
     player = pygame.Rect(WIDTH/2, HEIGHT/2, PLAYER_WIDTH, PLAYER_HEIGHT)
+    y_vel = 30
 
     # game loop
     clock = pygame.time.Clock()
@@ -226,6 +244,24 @@ def main():
                 if mouse_click[2]: # right mouse button
                     ORG_RECT.x = mouse_pos[0]-5
                     ORG_RECT.y = mouse_pos[1]-PORTAL_WIDTH//2
+            
+            # Check player jumping
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE and is_jumping == False:
+                    is_jumping = True
+                    is_falling = False
+
+        # put this into a method jump()!
+        if player.y > 0 and is_jumping:
+            player.y -= y_vel
+            y_vel -= 5
+            if y_vel == 0:
+                is_jumping = False
+                is_falling = True
+                y_vel = 30
+
+        if is_falling:
+            check_gravity(world_map, player)
         
         keys_pressed = pygame.key.get_pressed()
         move_player(keys_pressed, world_map, player)
