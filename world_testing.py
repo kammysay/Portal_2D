@@ -23,18 +23,47 @@ PLAYER_WIDTH, PLAYER_HEIGHT =  WIDTH//20, HEIGHT//5
 TILE_SIZE = WIDTH//10
 PORTAL_WIDTH, PORTAL_HEIGHT = 9, TILE_SIZE*2
 VEL = 10
-player_direction = 1 # 0 == left, 1 == right
-is_jumping = False
-is_falling = True
 
 # assets
-PLAYER_IMG = pygame.image.load(os.path.join('assets', 'sven.png'))
-PLAYER_SURF = pygame.transform.scale(PLAYER_IMG, (PLAYER_WIDTH, PLAYER_HEIGHT))
 BLOCK_IMG = pygame.image.load(os.path.join('assets', 'ground_texture_1.png'))
 BLOCK_RECT = pygame.transform.scale(BLOCK_IMG, (TILE_SIZE, TILE_SIZE))
 BLUE_RECT = pygame.Rect(0, 0, PORTAL_WIDTH, PORTAL_HEIGHT)
 ORG_RECT = pygame.Rect(0, 120, PORTAL_WIDTH, PORTAL_HEIGHT)
 # ------------------------ CONSTANTS ----
+
+# Player class
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.width = PLAYER_WIDTH
+        self.height = PLAYER_HEIGHT
+        image = pygame.image.load(os.path.join('assets', 'sven.png'))
+        self.surface = pygame.transform.scale(image, (self.width, self.height))
+        self.rect = self.surface.get_rect()
+        self.rect.x = WIDTH // 2
+        self.rect.y = HEIGHT // 2
+        #self.rect.center = (self.width/2, self.height/2)
+        # Game logic of player
+        self.direction = 1 # 0 == facing left, 1 == facing right
+        self.is_falling = True
+        self.is_jumping = False
+
+    # Control player movement
+    def move(self, x_vel, y_vel):
+        self.rect.x += x_vel
+        self.rect.y += y_vel
+
+    def teleport(self, x, y):
+        self.rect.centerx = x
+        self.rect.centery = y
+    
+    # Change which direction the player is looking
+    def flip(self):
+        self.surface = pygame.transform.flip(self.surface, True, False)
+        if self.direction == 0:
+            self.direction = 1
+        else:
+            self.direction = 0
 
 # loads the world map
 def load_map():
@@ -53,11 +82,11 @@ def load_map():
 # check if the player is going through the blue portal
 def blue_collision(player):
     # checks the midpoint of the player
-    char_mid_x = player.x + PLAYER_WIDTH/2
-    char_mid_y = player.y + PLAYER_HEIGHT/2
+    x = player.rect.centerx
+    y = player.rect.centery
 
     # is character colliding with blue portal
-    if char_mid_x >= BLUE_RECT.x and char_mid_x <= BLUE_RECT.x+PORTAL_WIDTH and char_mid_y >= BLUE_RECT.y and char_mid_y <= BLUE_RECT.y+PORTAL_HEIGHT:
+    if x >= BLUE_RECT.x and x <= BLUE_RECT.x+PORTAL_WIDTH and y >= BLUE_RECT.y and y <= BLUE_RECT.y+PORTAL_HEIGHT:
         return True
     else:
         return False
@@ -65,11 +94,11 @@ def blue_collision(player):
 # check if the player is going through the orange portal
 def orange_collision(player):
     # checks the midpoint of the player
-    char_mid_x = player.x + PLAYER_WIDTH/2
-    char_mid_y = player.y + PLAYER_HEIGHT/2
+    x = player.rect.centerx
+    y = player.rect.centery
 
     # is the character colliding with orange portal
-    if char_mid_x >= ORG_RECT.x and char_mid_x <= ORG_RECT.x+PORTAL_WIDTH and char_mid_y >= ORG_RECT.y and char_mid_y <= ORG_RECT.y+PORTAL_HEIGHT:
+    if x >= ORG_RECT.x and x <= ORG_RECT.x+PORTAL_WIDTH and y >= ORG_RECT.y and y <= ORG_RECT.y+PORTAL_HEIGHT:
         return True
     else:
         return False
@@ -116,69 +145,59 @@ def block_y_collision(world_map, x, y):
 
 # move the player in the x and y directions
 def move_player(keys_pressed, world_map, player):
-    # might need to assign global vars new values
-    global player_direction
-    global PLAYER_SURF
-
     # some quick bounds checking, won't need if I can find the glitch
-    if player.x < 0:
-        player.x = 0
-    if player.x+PLAYER_WIDTH > WIDTH:
-        player.x = WIDTH-PLAYER_WIDTH
+    if player.rect.x  < 0:
+        player.rect.x  = 0
+    if player.rect.x +PLAYER_WIDTH > WIDTH:
+        player.rect.x  = WIDTH-PLAYER_WIDTH
 
-    if keys_pressed[pygame.K_LEFT] and player.x > 0:
-        # flip player left if needed
-        if player_direction == 1:
-            PLAYER_SURF = pygame.transform.flip(PLAYER_SURF, True, False)
-            player_direction = 0
+    if keys_pressed[pygame.K_a] and player.rect.x  > 0:
+        # flip player if needed
+        if player.direction == 1:
+            player.flip()
         # if not colliding with blocks, move player
-        if not block_x_collision(world_map, player.x-1, player.y):
-            player.x -= VEL
+        if not block_x_collision(world_map, player.rect.x -1, player.rect.y):
+            player.move(-VEL, 0)
         # check if the player collided with portals
         if blue_collision(player):
-            player.x = ORG_RECT.x - PLAYER_WIDTH
-            player.y = ORG_RECT.y
+            player.teleport(ORG_RECT.centerx - PLAYER_WIDTH, ORG_RECT.centery)
         if orange_collision(player):
-            player.x = BLUE_RECT.x - PLAYER_WIDTH
-            player.y = BLUE_RECT.y
+            player.teleport(BLUE_RECT.centerx - PLAYER_WIDTH, BLUE_RECT.centery)
         
-    if keys_pressed[pygame.K_RIGHT] and player.x+PLAYER_WIDTH < WIDTH:
+    if keys_pressed[pygame.K_d] and player.rect.x+PLAYER_WIDTH < WIDTH:
         # flip player right if needed
-        if player_direction == 0:
-            PLAYER_SURF = pygame.transform.flip(PLAYER_SURF, True, False)
-            player_direction = 1
+        if player.direction == 0:
+            player.flip()
         # if not colliding with blocks, move player
-        if not block_x_collision(world_map, player.x+PLAYER_WIDTH, player.y):
-            player.x += VEL
+        if not block_x_collision(world_map, player.rect.x+PLAYER_WIDTH, player.rect.y):
+            player.rect.x  += VEL   
         # check if player collided with portals
         if blue_collision(player):
-            player.x = ORG_RECT.x + PORTAL_WIDTH
-            player.y = ORG_RECT.y
+            player.teleport(ORG_RECT.centerx + PORTAL_WIDTH, ORG_RECT.centery)
         if orange_collision(player):
-            player.x = BLUE_RECT.x + PORTAL_WIDTH
-            player.y = BLUE_RECT.y
+            player.teleport(BLUE_RECT.centerx + PORTAL_WIDTH, BLUE_RECT.centery)
         
     # UP and DOWN will be gone soon, once jump implemented
-    if keys_pressed[pygame.K_UP] and player.y > 0:
+    if keys_pressed[pygame.K_w] and player.rect.y > 0:
         # if not colliding with blocks, move player
-        if not block_y_collision(world_map, player.x, player.y-1):
-            player.y -= VEL
+        if not block_y_collision(world_map, player.rect.x, player.rect.y-1):
+            player.rect.y -= VEL
+            player.is_falling = True
        
-    if keys_pressed[pygame.K_DOWN] and player.y+PLAYER_HEIGHT < HEIGHT:
+    if keys_pressed[pygame.K_s] and player.rect.y+PLAYER_HEIGHT < HEIGHT:
         # if not colliding with blocks, move player
-        if not block_y_collision(world_map, player.x, player.y+PLAYER_HEIGHT):
-            player.y += VEL
+        if not block_y_collision(world_map, player.rect.x , player.rect.y+PLAYER_HEIGHT):
+            player.rect.y += VEL
 
 # should the player be falling?
 def check_gravity(world_map, player):
     # if y is not colliding with world_map in the y direction, decrement height
-    y = player.y+PLAYER_HEIGHT
-    if y < HEIGHT and block_y_collision(world_map, player.x, y):
-        is_jumping = False
-        is_falling = False
-    if y < HEIGHT and not block_y_collision(world_map, player.x, y):
-        is_falling = True
-        player.y += VEL //2
+    y = player.rect.bottom
+    if y < HEIGHT and block_y_collision(world_map, player.rect.x, y):
+        player.is_falling = False
+    if y < HEIGHT and not block_y_collision(world_map, player.rect.x, y):
+        player.is_falling = True
+        player.rect.y += VEL //2
 
 # draws the map
 def draw_map(world_map):
@@ -198,15 +217,12 @@ def draw_window(player, world_map):
     draw_map(world_map)
     pygame.draw.rect(WIN, BLUE, BLUE_RECT)
     pygame.draw.rect(WIN, ORANGE, ORG_RECT)
-    WIN.blit(PLAYER_SURF, (player.x, player.y))
+    WIN.blit(player.surface, (player.rect.x , player.rect.y))
     pygame.display.update()
 
 def main():
-    global is_jumping
-    global is_falling
-
     # world_map = load_map()
-    world_map = [
+    world_map = [ # This is just a temporary testing map
         [ '0', '1', '1', '1', '1', '1', '1', '0', '0', '1'],
         [ '0', '0', '1', '0', '1', '1', '1', '0', '0', '1'],
         [ '1', '0', '1', '0', '0', '0', '0', '0', '0', '1'],
@@ -219,9 +235,8 @@ def main():
         [ '1', '1', '1', '1', '0', '0', '1', '1', '1', '1']
     ]
     
-    # Rect(x, y, width, height)
-    player = pygame.Rect(WIDTH/2, HEIGHT/2, PLAYER_WIDTH, PLAYER_HEIGHT)
-    y_vel = 30
+    # Player(pygame.sprite.Sprite)
+    player = Player()
 
     # game loop
     clock = pygame.time.Clock()
@@ -244,37 +259,25 @@ def main():
                 if mouse_click[2]: # right mouse button
                     ORG_RECT.x = mouse_pos[0]-5
                     ORG_RECT.y = mouse_pos[1]-PORTAL_WIDTH//2
-            
-            # Check player jumping
+             # DEBUG EVENT - TO BE REMOVED
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE and is_jumping == False:
-                    is_jumping = True
-                    is_falling = False
+                kp = pygame.key.get_pressed()
+                if kp[pygame.K_h]:
+                    print("-- DEBUG -----------------------------------------------")
+                    print("blue.x, blue.y == ", BLUE_RECT.x, BLUE_RECT.y)
+                    print("orange.x, orange.y == ", ORG_RECT.x, ORG_RECT.y)
+                    print("Player width ==", player.rect.right - player.rect.left)
+                    print("Player height == ", player.rect.bottom - player.rect.top)
+                    print("Player TopLeft == ", player.rect.topleft)
+                    print("Player BottomRight == ", player.rect.bottomright)
+                    print("--------------------------------------------------------")
+            
 
-        # put this into a method jump()!
-        if player.y > 0 and is_jumping:
-            player.y -= y_vel
-            y_vel -= 5
-            if y_vel == 0:
-                is_jumping = False
-                is_falling = True
-                y_vel = 30
-
-        if is_falling:
-            check_gravity(world_map, player)
+        # if player.is_falling:
+        #     check_gravity(world_map, player)
         
         keys_pressed = pygame.key.get_pressed()
         move_player(keys_pressed, world_map, player)
-
-        # DEBUG
-        if keys_pressed[pygame.K_h]:
-            print("-------------------------------------------------")
-            print("top.x, top.y == ", player.x, ", ", player.y)
-            print("right.x, bottom.y == ", player.x+PLAYER_WIDTH, ", ", player.y+PLAYER_HEIGHT)
-            print("blue.x, blue.y == ", BLUE_RECT.x, BLUE_RECT.y)
-            print("orange.x, orange.y == ", ORG_RECT.x, ORG_RECT.y) 
-            print("-------------------------------------------------")
-
         draw_window(player, world_map)
 
 if __name__ == "__main__":
