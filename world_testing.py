@@ -21,7 +21,7 @@ ORANGE = (255, 127, 80)
 # game logic
 PLAYER_WIDTH, PLAYER_HEIGHT =  WIDTH//20, HEIGHT//5
 TILE_SIZE = WIDTH//10
-PORTAL_WIDTH, PORTAL_HEIGHT = 9, TILE_SIZE*2
+PORTAL_WIDTH, PORTAL_HEIGHT = PLAYER_WIDTH//2-1, TILE_SIZE*2
 VEL = 10
 
 # assets
@@ -47,6 +47,7 @@ class Player(pygame.sprite.Sprite):
         self.direction = 1 # 0 == facing left, 1 == facing right
         self.is_falling = True
         self.is_jumping = False
+        self.just_teleported = False
 
     # Control player movement
     def move(self, x_vel, y_vel):
@@ -79,12 +80,7 @@ def load_map():
         world_map.append(elements)
     return world_map
 
-# check if the player is going through the blue portal
-def blue_collision(player):
-    # checks the midpoint of the player
-    x = player.rect.centerx
-    y = player.rect.centery
-
+def blue_collision(x, y):
     # is character colliding with blue portal
     if x >= BLUE_RECT.x and x <= BLUE_RECT.x+PORTAL_WIDTH and y >= BLUE_RECT.y and y <= BLUE_RECT.y+PORTAL_HEIGHT:
         return True
@@ -92,11 +88,7 @@ def blue_collision(player):
         return False
 
 # check if the player is going through the orange portal
-def orange_collision(player):
-    # checks the midpoint of the player
-    x = player.rect.centerx
-    y = player.rect.centery
-
+def orange_collision(x, y):
     # is the character colliding with orange portal
     if x >= ORG_RECT.x and x <= ORG_RECT.x+PORTAL_WIDTH and y >= ORG_RECT.y and y <= ORG_RECT.y+PORTAL_HEIGHT:
         return True
@@ -114,7 +106,7 @@ def block_x_collision(world_map, x, y):
     y3 = (y+PLAYER_HEIGHT-1) // TILE_SIZE
 
     # Check if left, middle, or right points of player is colliding
-    # after going thru portal cords get wacky, this this prevents list index out of range error
+    # the ifs prevents crashing from list index out of range error with map
     if y1 < 0:
         y1 = 0
     if y3 > 9:
@@ -133,7 +125,7 @@ def block_y_collision(world_map, x, y):
     y = y // TILE_SIZE
 
     # Check if left, middle, or right points of player is colliding
-    # after going thru portal cords get wacky, this prevents list index out of range error
+    # the ifs prevents crashing from list index out of range error with map
     if x1 < 0:
         x1 = 0
     if x3 > 9:
@@ -145,37 +137,35 @@ def block_y_collision(world_map, x, y):
 
 # move the player in the x and y directions
 def move_player(keys_pressed, world_map, player):
-    # some quick bounds checking, won't need if I can find the glitch
-    if player.rect.x  < 0:
-        player.rect.x  = 0
-    if player.rect.x +PLAYER_WIDTH > WIDTH:
-        player.rect.x  = WIDTH-PLAYER_WIDTH
-
     if keys_pressed[pygame.K_a] and player.rect.x  > 0:
         # flip player if needed
         if player.direction == 1:
             player.flip()
+
+        # check if the player collided with portals
+        if blue_collision(player.rect.left-1, player.rect.centery):
+            player.rect.topright = (ORG_RECT.left, ORG_RECT.top)
+        if orange_collision(player.rect.left-1, player.rect.centery):
+            player.rect.topright = (BLUE_RECT.left, BLUE_RECT.top)
+
         # if not colliding with blocks, move player
         if not block_x_collision(world_map, player.rect.x -1, player.rect.y):
             player.move(-VEL, 0)
-        # check if the player collided with portals
-        if blue_collision(player):
-            player.teleport(ORG_RECT.centerx - PLAYER_WIDTH, ORG_RECT.centery)
-        if orange_collision(player):
-            player.teleport(BLUE_RECT.centerx - PLAYER_WIDTH, BLUE_RECT.centery)
         
     if keys_pressed[pygame.K_d] and player.rect.x+PLAYER_WIDTH < WIDTH:
         # flip player right if needed
         if player.direction == 0:
-            player.flip()
+            player.flip()  
+
+        # check if player collided with portals
+        if blue_collision(player.rect.right+1, player.rect.centery):
+            player.rect.topleft = (ORG_RECT.right, ORG_RECT.top)
+        if orange_collision(player.rect.right+1, player.rect.centery):
+            player.rect.topleft = (BLUE_RECT.right, BLUE_RECT.top)
+
         # if not colliding with blocks, move player
         if not block_x_collision(world_map, player.rect.x+PLAYER_WIDTH, player.rect.y):
-            player.rect.x  += VEL   
-        # check if player collided with portals
-        if blue_collision(player):
-            player.teleport(ORG_RECT.centerx + PORTAL_WIDTH, ORG_RECT.centery)
-        if orange_collision(player):
-            player.teleport(BLUE_RECT.centerx + PORTAL_WIDTH, BLUE_RECT.centery)
+            player.rect.x  += VEL 
         
     # UP and DOWN will be gone soon, once jump implemented
     if keys_pressed[pygame.K_w] and player.rect.y > 0:
@@ -188,6 +178,27 @@ def move_player(keys_pressed, world_map, player):
         # if not colliding with blocks, move player
         if not block_y_collision(world_map, player.rect.x , player.rect.y+PLAYER_HEIGHT):
             player.rect.y += VEL
+
+# Places portal on either the left or right side of a block depending on mouse position
+# In the future will set it so that portals can only go on '1' tiles
+def move_portal(mouse_pos, portal):
+    # Floor the mouse position to the nearest even intervals of tile size
+    # Portals can't be just anywhere, which causes glitches.
+    L = (mouse_pos[0] // TILE_SIZE) * TILE_SIZE
+    R = (mouse_pos[0] // TILE_SIZE) * TILE_SIZE + TILE_SIZE
+    H = (mouse_pos[1] // TILE_SIZE) * TILE_SIZE
+    leftRange = abs(mouse_pos[0] - L)
+    rightRange = abs(mouse_pos[0] - R)
+
+    # Set portal to either left or right side of block depending on mouse proximity
+    if leftRange <= rightRange:
+        # move the portal to the left side of the block
+        portal.left = L
+        portal.y = H
+    else:
+        # move the portal to the right side of the block
+        portal.right = R
+        portal.y = H
 
 # should the player be falling?
 def check_gravity(world_map, player):
@@ -247,18 +258,18 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
             # move portals if player clicks mouse button
-            # need to implement feature that only allows portals on edge of walls
-            # maybe if x = mouse_pos//60, world_map[x][x] == '1', then place portal
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_click = pygame.mouse.get_pressed()
                 mouse_pos = pygame.mouse.get_pos()
-                print(mouse_pos)
-                if mouse_click[0]: # left mouse button
-                    BLUE_RECT.x = mouse_pos[0]-5
-                    BLUE_RECT.y = mouse_pos[1]-PORTAL_WIDTH//2
-                if mouse_click[2]: # right mouse button
-                    ORG_RECT.x = mouse_pos[0]-5
-                    ORG_RECT.y = mouse_pos[1]-PORTAL_WIDTH//2
+                mx = mouse_pos[0] // 60
+                my = mouse_pos[1] // 60
+                # Portal can only be placed on walls
+                if world_map[my][mx] == '1':
+                    print(mouse_pos)
+                    if mouse_click[0]: # left mouse button
+                        move_portal(mouse_pos, BLUE_RECT)
+                    if mouse_click[2]: # right mouse button
+                        move_portal(mouse_pos, ORG_RECT)
              # DEBUG EVENT - TO BE REMOVED
             if event.type == pygame.KEYDOWN:
                 kp = pygame.key.get_pressed()
@@ -284,7 +295,8 @@ if __name__ == "__main__":
     main()
 
 # NOTES
-# for some reason after I teleport through a portal, my x cords get messed up,
-# causing me to clip into blocks and get stuck. Potentially due to portals
-# coords, maybe set them to only sit on intervals of TILE_SIZE. Then maybe
-# I could set player to only ever spawn on the tops of blocks.
+# Post-teleport Glitch: after teleporting through a portal, player improperly collides
+# with blocks, gets stuck in walls and floors.
+# Fixed: the post-teleport glitch was due to the location of the portals.
+# Placing the portals in even intervals on the map (TILE_SIZE intervals), and spawning
+# the player in similar intervals when teleporting resolves the post-teleport issue.
