@@ -5,9 +5,8 @@ import pygame
 
 # ---- CONSTANTS ------------------------
 # window
-# for some god DAMN reason this causes out of range errors in collision
-# when the width/height starts with an odd number...
-WIDTH, HEIGHT = 600, 600
+# WIDTH, HEIGHT = 1120, 800
+WIDTH, HEIGHT = 896, 640
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Portal 2D: World Testing")
 FPS = 60
@@ -19,14 +18,15 @@ BLUE = (0, 91, 255)
 ORANGE = (255, 127, 80)
 
 # game logic
-PLAYER_WIDTH, PLAYER_HEIGHT =  WIDTH//20, HEIGHT//5
-TILE_SIZE = WIDTH//10
-PORTAL_WIDTH, PORTAL_HEIGHT = PLAYER_WIDTH//2-1, TILE_SIZE*2
-VEL = 10
+TILE_SIZE = HEIGHT//10
+PLAYER_WIDTH, PLAYER_HEIGHT =  TILE_SIZE//2, HEIGHT//5
+VEL = 8
 
 # assets
 BLOCK_IMG = pygame.image.load(os.path.join('assets', 'ground_texture_1.png'))
 BLOCK_RECT = pygame.transform.scale(BLOCK_IMG, (TILE_SIZE, TILE_SIZE))
+SLUDGE_IMG = pygame.image.load(os.path.join('assets', 'sludge.png'))
+SLUDGE_RECT = pygame.transform.scale(SLUDGE_IMG, (TILE_SIZE, TILE_SIZE))
 # ------------------------ CONSTANTS ----
 
 # Player class
@@ -40,7 +40,6 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.surface.get_rect()
         self.rect.x = WIDTH // 2
         self.rect.y = HEIGHT // 2
-        #self.rect.center = (self.width/2, self.height/2)
         # Game logic of player
         self.direction = 1 # 0 == Left, 1 == Right
         self.is_falling = True
@@ -120,8 +119,6 @@ def portal_collision(portal, x, y):
 # check if the player collided with any blocks in x axis (O(1))
 def block_x_collision(world_map, x, y):
     # top, middle, bottom of player
-    if x > WIDTH:
-        x = WIDTH
     x = x // TILE_SIZE
     y1 = y // TILE_SIZE
     y2 = (y+PLAYER_HEIGHT//2) // TILE_SIZE
@@ -129,10 +126,10 @@ def block_x_collision(world_map, x, y):
 
     # Check if left, middle, or right points of player is colliding
     # the ifs prevents crashing from list index out of range error with map
-    if y1 < 0:
-        y1 = 0
-    if y3 > 9:
-        y3 = 9
+    # if y1 < 0:
+    #     y1 = 0
+    # if y3 > 9:
+    #     y3 = 9
     if world_map[y1][x] == '1' or world_map[y2][x] == '1' or world_map[y3][x] == '1':
         return True
     else:
@@ -148,10 +145,10 @@ def block_y_collision(world_map, x, y):
 
     # Check if left, middle, or right points of player is colliding
     # the ifs prevents crashing from list index out of range error with map
-    if x1 < 0:
-        x1 = 0
-    if x3 > 9:
-        x3 = 9
+    # if x1 < 0:
+    #     x1 = 0
+    # if x3 > 9:
+    #     x3 = 9
     if world_map[y][x1] == '1' or world_map[y][x2] == '1' or world_map[y][x3] == '1':
         return True
     else:
@@ -219,8 +216,8 @@ def draw_map(world_map):
     row_count = 0
     for row in world_map:
         col_count = 0
-        for tile in row:
-            if tile == '1':
+        for col in row:
+            if col == '1':
                 block_rect = pygame.Rect(col_count*TILE_SIZE, row_count*TILE_SIZE, TILE_SIZE, TILE_SIZE)
                 WIN.blit(BLOCK_RECT, (block_rect.x, block_rect.y))
             col_count += 1
@@ -235,19 +232,8 @@ def draw_window(world_map, player, blue, orange):
     pygame.display.update()
 
 def main():
-    # world_map = load_map()
-    world_map = [ # This is just a temporary testing map
-        [ '0', '1', '1', '1', '1', '1', '1', '0', '0', '1'],
-        [ '0', '0', '1', '0', '1', '1', '1', '0', '0', '1'],
-        [ '1', '0', '1', '0', '0', '0', '0', '0', '0', '1'],
-        [ '0', '0', '0', '0', '0', '0', '0', '1', '0', '1'],
-        [ '0', '0', '0', '0', '0', '0', '0', '0', '0', '1'],
-        [ '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
-        [ '1', '0', '1', '0', '0', '0', '0', '0', '0', '0'],
-        [ '1', '0', '1', '0', '0', '0', '0', '0', '0', '0'],
-        [ '1', '0', '1', '0', '0', '0', '0', '0', '1', '1'],
-        [ '1', '1', '1', '1', '0', '0', '1', '1', '1', '1']
-    ]
+    # Init map
+    world_map = load_map()
     
     # Init Player(pygame.sprite.Sprite)
     player = Player()
@@ -255,8 +241,7 @@ def main():
     # Init Portal(x, y)
     blue = Portal(0, 0)
     orange = Portal(0, 120)
-
-
+    
     # game loop
     clock = pygame.time.Clock()
     run = True
@@ -269,11 +254,10 @@ def main():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_click = pygame.mouse.get_pressed()
                 mouse_pos = pygame.mouse.get_pos()
-                mx = mouse_pos[0] // 60
-                my = mouse_pos[1] // 60
+                mx = mouse_pos[0] // TILE_SIZE
+                my = mouse_pos[1] // TILE_SIZE
                 # Portal can only be placed on walls
                 if world_map[my][mx] == '1':
-                    print(mouse_pos)
                     if mouse_click[0]: # left mouse button
                         blue.move(mouse_pos)
                     if mouse_click[2]: # right mouse button
@@ -283,14 +267,9 @@ def main():
                 kp = pygame.key.get_pressed()
                 if kp[pygame.K_h]:
                     print("-- DEBUG -----------------------------------------------")
-                    print("blue.x, blue.y == ", blue.rect.x, blue.rect.y)
-                    print("orange.x, orange.y == ", orange.rect.x, orange.rect.y)
-                    print("Player width ==", player.rect.right - player.rect.left)
-                    print("Player height == ", player.rect.bottom - player.rect.top)
                     print("Player TopLeft == ", player.rect.topleft)
                     print("Player BottomRight == ", player.rect.bottomright)
-                    print("--------------------------------------------------------")
-            
+                    print("--------------------------------------------------------")    
 
         # if player.is_falling:
         #     check_gravity(world_map, player)
@@ -301,10 +280,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# NOTES
-# Post-teleport Glitch: after teleporting through a portal, player improperly collides
-# with blocks, gets stuck in walls and floors.
-# Fixed: the post-teleport glitch was due to the location of the portals.
-# Placing the portals in even intervals on the map (TILE_SIZE intervals), and spawning
-# the player in similar intervals when teleporting resolves the post-teleport issue.
