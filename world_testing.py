@@ -5,7 +5,7 @@ import pygame
 
 # ---- GLOBAL STUFF ------------------------
 # window
-WIDTH, HEIGHT = 1024, 640 # multiples of 64
+WIDTH, HEIGHT = 1152, 704 #  must be multiples of 64
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Portal 2D: World Testing")
 FPS = 60
@@ -17,9 +17,9 @@ BLUE = (0, 91, 255)
 ORANGE = (255, 127, 80)
 
 # game logic
-TILE_SIZE = HEIGHT//10
-TILES_X, TILES_Y = WIDTH/TILE_SIZE, HEIGHT/TILE_SIZE # number of tiles in each direction
-PLAYER_WIDTH, PLAYER_HEIGHT =  TILE_SIZE//2, HEIGHT//5
+TILE_SIZE = 64
+TILES_X, TILES_Y = WIDTH/TILE_SIZE, HEIGHT/TILE_SIZE # number of tiles in each direction (18 x 11)
+PLAYER_WIDTH, PLAYER_HEIGHT =  TILE_SIZE//2, TILE_SIZE*2
 VEL = 8
 JUMP_VEL = 30
 
@@ -34,7 +34,7 @@ SLUDGE_IMG = pygame.image.load(os.path.join('assets', 'sludge.png'))
 SLUDGE_RECT = pygame.transform.scale(SLUDGE_IMG, (TILE_SIZE, TILE_SIZE))
 PORTAL_WALL_IMG = pygame.image.load(os.path.join('assets', 'portal_wall.png'))
 PORTAL_WALL_RECT = pygame.transform.scale(PORTAL_WALL_IMG, (TILE_SIZE, TILE_SIZE))
-# ------------------------ CONSTANTS ----
+# ------------------------------------------
 
 # Player class
 class Player(pygame.sprite.Sprite):
@@ -58,10 +58,16 @@ class Player(pygame.sprite.Sprite):
         self.rect.x += x_vel
         self.rect.y += y_vel
 
-    # Teleport player after going through portal (not currently used)
-    def teleport(self, x, y):
-        self.rect.centerx = x
-        self.rect.centery = y
+    # Teleport player after going through portal
+    def teleport(self, portal):
+        if portal.direction == 0:
+            self.rect.topright = (portal.rect.left, portal.rect.top)
+        if portal.direction == 1:
+            self.rect.topleft = (portal.rect.right, portal.rect.top)
+        if portal.direction == 2:
+            self.rect.bottomleft = (portal.rect.centerx, portal.rect.top)
+        if portal.direction == 3:
+            self.rect.topright = (portal.rect.centerx, portal.rect.bottom)
     
     # Change which direction the player is looking
     def flip(self):
@@ -74,36 +80,65 @@ class Player(pygame.sprite.Sprite):
 # Portal class
 class Portal():
     def __init__(self, x, y):
-        self.width = PLAYER_WIDTH // 2
-        self.height = TILE_SIZE * 2
-        self.rect = pygame.Rect(x, y, self.width, self.height)
-        self.direction = 0 # 0 == Left, 1 == Right
+        self.vert_width = PLAYER_WIDTH // 2
+        self.vert_height = TILE_SIZE * 2
+        self.hor_width = TILE_SIZE * 2
+        self.hor_height = PLAYER_WIDTH // 2
+        self.rect = pygame.Rect(x, y, self.vert_width, self.vert_height)
+        self.direction = 0 # 0 == Left, 1 == Right, 2 = Up, 3 == Down
 
-    # Places portal on either the left or right side of a block depending on mouse position
-    def move(self, mouse_pos):
-        # Floor the mouse position to the nearest even intervals of tile size
-        # Portals can't be just anywhere, which causes glitches.
-        L = (mouse_pos[0] // TILE_SIZE) * TILE_SIZE
-        R = (mouse_pos[0] // TILE_SIZE) * TILE_SIZE + TILE_SIZE
-        H = (mouse_pos[1] // TILE_SIZE) * TILE_SIZE
-        leftRange = abs(mouse_pos[0] - L)
-        rightRange = abs(mouse_pos[0] - R)
+    # Move portal to block depending on mouse position.
+    # orientation is whether or not the portal is being placed horizonatal (0) or vertical (1)
+    def move(self, mouse_pos, orientation):
+        mx = mouse_pos[0]
+        my = mouse_pos[1]
+        if orientation == 0: # vertical portal
+            self.rect.width = self.vert_width
+            self.rect.height = self.vert_height
 
-        # Set portal to either left or right side of block depending on mouse proximity
-        if leftRange <= rightRange:
-            # move the portal to the left side of the block
-            self.rect.left = L
-            self.rect.top = H
-            self.direction = 0
-        else:
-            # move the portal to the right side of the block
-            self.rect.right = R
-            self.rect.top = H
-            self.direction = 1
+            # Floor the mouse position to the nearest even intervals of tile size
+            L = (mx // TILE_SIZE) * TILE_SIZE
+            R = (mx // TILE_SIZE) * TILE_SIZE + TILE_SIZE
+            Y = (my // TILE_SIZE) * TILE_SIZE
+            leftRange = abs(mx - L)
+            rightRange = abs(mx - R)
+
+            # Set portal to either left or right side of block depending on mouse proximity
+            if leftRange <= rightRange:
+                # move the portal to the left side of the block
+                self.rect.left = L
+                self.rect.top = Y
+                self.direction = 0
+            else:
+                # move the portal to the right side of the block
+                self.rect.right = R
+                self.rect.top = Y
+                self.direction = 1
+        else: # horizontal portal
+            self.rect.width = self.hor_width
+            self.rect.height = self.hor_height
+
+            # Floor the mouse position to the nearest even intervals of tile size
+            T = (my // TILE_SIZE) * TILE_SIZE
+            B = (my // TILE_SIZE) * TILE_SIZE + TILE_SIZE
+            X = (mx // TILE_SIZE) * TILE_SIZE
+            topRange = abs(my - T)
+            bottomRange = abs(my - B)
+
+            if topRange <= bottomRange:
+                # move portal to top of blocks
+                self.rect.top = T
+                self.rect.left = X
+                self.direction = 2
+            else:
+                # move portal to bottom of block
+                self.rect.bottom = B
+                self.rect.left = X
+                self.direction = 3
 
 # loads the world and collision maps
 def load_maps():
-    file_location = os.path.join('maps', 'test_map.txt')
+    file_location = os.path.join('maps', '1.txt')
     f = open(file_location)
 
     # Loop thru file, load text into 2D List
@@ -188,9 +223,9 @@ def move_player(keys_pressed, player, blue, orange):
 
         # check if player collided with blue/orange portals
         if portal_collision(blue, player.rect.left-1, player.rect.centery+1):
-            player.rect.topright = (orange.rect.left, orange.rect.top)
+            player.teleport(orange)
         if portal_collision(orange, player.rect.left-1, player.rect.centery+1):
-            player.rect.topright = (blue.rect.left, blue.rect.top)
+            player.teleport(blue)
 
         # if not colliding with blocks, move player
         if not block_x_collision(player.rect.x -1, player.rect.y):
@@ -204,25 +239,37 @@ def move_player(keys_pressed, player, blue, orange):
 
         # check if player collided with blue/orange portals
         if portal_collision(blue, player.rect.right+1, player.rect.centery+1):
-            player.rect.topleft = (orange.rect.right, orange.rect.top)
+            player.teleport(orange)
         if portal_collision(orange, player.rect.right+1, player.rect.centery+1):
-            player.rect.topleft = (blue.rect.right, blue.rect.top)
+            player.teleport(blue)
 
         # if not colliding with blocks, move player
-        if not block_x_collision(player.rect.x+PLAYER_WIDTH, player.rect.y):
-            player.rect.x  += VEL 
+        if not block_x_collision(player.rect.right, player.rect.y):
+            player.move(VEL, 0)
         
     # UP and DOWN will be gone soon, once jump implemented
     if keys_pressed[pygame.K_w] and player.rect.y > 0:
+        # check if player collided with blue/orange portals
+        if portal_collision(blue, player.rect.centerx, player.rect.top-1):
+            player.teleport(orange)
+        if portal_collision(orange, player.rect.centerx, player.rect.top-1):
+            player.teleport(blue)
+
         # if not colliding with blocks, move player
         if not block_y_collision(player.rect.x, player.rect.y-1):
-            player.rect.y -= VEL
+            player.move(0, -VEL)
             player.is_falling = True
        
     if keys_pressed[pygame.K_s] and player.rect.y+PLAYER_HEIGHT < HEIGHT:
+        # check if player collided with blue/orange portals
+        if portal_collision(blue, player.rect.centerx, player.rect.bottom+1):
+            player.teleport(orange)
+        if portal_collision(orange, player.rect.centerx, player.rect.bottom+1):
+            player.teleport(blue)
+
         # if not colliding with blocks, move player
-        if not block_y_collision(player.rect.x , player.rect.y+PLAYER_HEIGHT):
-            player.rect.y += VEL
+        if not block_y_collision(player.rect.x , player.rect.bottom):
+            player.move(0, VEL)
 
 # the player wants to jump
 def jump(player):
@@ -256,10 +303,10 @@ def draw_map():
             if col == '1':
                 block_rect = pygame.Rect(col_count*TILE_SIZE, row_count*TILE_SIZE, TILE_SIZE, TILE_SIZE)
                 WIN.blit(BLOCK_RECT, (block_rect.x, block_rect.y))
-            if col == '2':
+            elif col == '2':
                 block_rect = pygame.Rect(col_count*TILE_SIZE, row_count*TILE_SIZE, TILE_SIZE, TILE_SIZE)
                 WIN.blit(SLUDGE_RECT, (block_rect.x, block_rect.y))
-            if col == '3':
+            elif col == '3' or col == '4':
                 block_rect = pygame.Rect(col_count*TILE_SIZE, row_count*TILE_SIZE, TILE_SIZE, TILE_SIZE)
                 WIN.blit(PORTAL_WALL_RECT, (block_rect.x, block_rect.y))
             col_count += 1
@@ -301,34 +348,32 @@ def main():
         keys_pressed = pygame.key.get_pressed()
         # Check for individual events
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT or keys_pressed[pygame.K_q]:
                 pygame.quit()
+            
             # move portals if player clicks mouse button
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_click = pygame.mouse.get_pressed()
                 mouse_pos = pygame.mouse.get_pos()
                 mx = mouse_pos[0] // TILE_SIZE
                 my = mouse_pos[1] // TILE_SIZE
-                # Portal can only be placed on portal walls
+                # Portal placed on wall
                 if world_map[my][mx] == '3':
                     if mouse_click[0]: # left mouse button
-                        blue.move(mouse_pos)
+                        blue.move(mouse_pos, 0)
                     if mouse_click[2]: # right mouse button
-                        orange.move(mouse_pos)
+                        orange.move(mouse_pos, 0)
+                # Portal placed on floor
+                if world_map[my][mx] == '4':
+                    if mouse_click[0]: # left mouse button
+                        blue.move(mouse_pos, 1)
+                    if mouse_click[2]: # right mouse button
+                        orange.move(mouse_pos, 1)
 
             # If the player jumps
             if keys_pressed[pygame.K_SPACE]:
                 player.is_jumping = True
-                player.is_falling = False
-            # DEBUG EVENT - Prints to console
-            if keys_pressed[pygame.K_h]:
-                print("-- DEBUG -----------------------------------------------")
-                print("Player TopLeft == ", player.rect.topleft)
-                print("Player BottomRight == ", player.rect.bottomright)
-                print("COLLISION MAP")
-                for line in collision_map:
-                    print(line)
-                print("--------------------------------------------------------")    
+                player.is_falling = False 
 
         # if player.is_jumping == True:
         #     jump(player)
