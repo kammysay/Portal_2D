@@ -30,8 +30,10 @@ collision_map = []
 # assets
 BLOCK_IMG = pygame.image.load(os.path.join('assets', 'ground_texture_1.png'))
 BLOCK_RECT = pygame.transform.scale(BLOCK_IMG, (TILE_SIZE, TILE_SIZE))
+
 SLUDGE_IMG = pygame.image.load(os.path.join('assets', 'sludge.png'))
 SLUDGE_RECT = pygame.transform.scale(SLUDGE_IMG, (TILE_SIZE, TILE_SIZE))
+
 PORTAL_WALL_IMG = pygame.image.load(os.path.join('assets', 'portal_wall.png'))
 PORTAL_WALL_RECT = pygame.transform.scale(PORTAL_WALL_IMG, (TILE_SIZE, TILE_SIZE))
 # ------------------------------------------
@@ -58,7 +60,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.x += x_vel
         self.rect.y += y_vel
 
-    # Teleport player after going through portal
+    # Teleport player to specified portal
     def teleport(self, portal):
         if portal.direction == 0:
             self.rect.topright = (portal.rect.left, portal.rect.top)
@@ -135,6 +137,36 @@ class Portal():
                 self.rect.bottom = B
                 self.rect.left = X
                 self.direction = 3
+
+class Button():
+    def __init__(self, x, y):
+        self.width = TILE_SIZE*2
+        self.height = TILE_SIZE
+        self.image = pygame.image.load(os.path.join('assets', 'button.png'))
+        self.surface = pygame.transform.scale(self.image, (self.width, self.height))
+        self.rect = self.surface.get_rect()
+        self.rect.bottomleft = (x, y)
+        self.activated = False
+
+class Cube():
+    def __init__(self, x, y):
+        self.width = TILE_SIZE
+        self.height = TILE_SIZE
+        self.image = pygame.image.load(os.path.join('assets', 'cube.png'))
+        self.surface = pygame.transform.scale(self.image, (self.width, self.height))
+        self.rect = self.surface.get_rect()
+        self.rect.bottomleft = (x, y)
+        self.held = False
+        self.is_falling = False
+
+    def move(self, player):
+        # if player facing left
+        if player.direction == 0:
+            self.rect.right = player.rect.left
+            self.rect.centery = player.rect.centery
+        if player.direction == 1:
+            self.rect.left = player.rect.right
+            self.rect.centery = player.rect.centery
 
 # loads the world and collision maps
 def load_maps():
@@ -282,16 +314,16 @@ def jump(player):
         player.is_jumping = False
         player.is_falling = True
 
-# should the player be falling?
+# should any objects be falling?
 # something in here causing some COLLISIONNNNNN issues
-def check_gravity(player):
+def check_gravity(obj):
     # if y is not colliding with world_map in the y direction, decrement height
-    y = player.rect.bottom
-    if y < HEIGHT and block_y_collision(player.rect.x, y):
-        player.is_falling = False
-    if y+2 < HEIGHT and not block_y_collision(player.rect.x, y+2):
-        player.is_falling = True
-        player.rect.y += 2
+    y = obj.rect.bottom
+    if y < HEIGHT and block_y_collision(obj.rect.x, y):
+        obj.is_falling = False
+    if y+2 < HEIGHT and not block_y_collision(obj.rect.x, y+2):
+        obj.is_falling = True
+        obj.rect.y += 2
 
 # draws the map
 def draw_map():
@@ -313,10 +345,12 @@ def draw_map():
         row_count += 1
 
 # draw necessary things to the screen
-def draw_window(player, blue, orange):
+def draw_window(player, blue, orange, button, cube):
     draw_map()
     pygame.draw.rect(WIN, BLUE, blue)
     pygame.draw.rect(WIN, ORANGE, orange)
+    WIN.blit(button.surface, (button.rect.x, button.rect.y))
+    WIN.blit(cube.surface, (cube.rect.topleft))
     WIN.blit(player.surface, (player.rect.x , player.rect.y))
     pygame.display.update()
 
@@ -339,6 +373,12 @@ def main():
     # Init Portal(x, y)
     blue = Portal(0, 0)
     orange = Portal(0, 120)
+
+    # Init Button(x, y)
+    button = Button(TILE_SIZE*2, TILE_SIZE*9)
+
+    # Init Cube(x, y)
+    cube = Cube(TILE_SIZE*3, TILE_SIZE*3)
     
     # game loop
     clock = pygame.time.Clock()
@@ -370,6 +410,17 @@ def main():
                     if mouse_click[2]: # right mouse button
                         orange.move(mouse_pos, 1)
 
+            # Player grabs cube 
+            cube_x_distance = abs(player.rect.centerx - cube.rect.centerx)
+            cube_y_distance = abs(player.rect.centery - cube.rect.centery)
+            if keys_pressed[pygame.K_e] and cube_x_distance < 100 and cube_y_distance < 100:
+                if cube.held == True:
+                    cube.held = False
+                else:
+                    cube.held = True
+                
+
+
             # If the player jumps
             if keys_pressed[pygame.K_SPACE]:
                 player.is_jumping = True
@@ -380,7 +431,9 @@ def main():
         # if player.is_falling == True:
         #     check_gravity(player)
         move_player(keys_pressed, player, blue, orange)
-        draw_window(player, blue, orange)
+        if cube.held:
+            cube.move(player)
+        draw_window(player, blue, orange, button, cube)
         
 if __name__ == "__main__":
     main()
