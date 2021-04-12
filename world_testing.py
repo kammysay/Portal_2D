@@ -2,6 +2,8 @@
 
 import os
 import pygame
+import Sprites as sp
+import Objects as ob
 
 # ---- GLOBAL STUFF ------------------------
 # window
@@ -38,135 +40,6 @@ PORTAL_WALL_IMG = pygame.image.load(os.path.join('assets', 'portal_wall.png'))
 PORTAL_WALL_RECT = pygame.transform.scale(PORTAL_WALL_IMG, (TILE_SIZE, TILE_SIZE))
 # ------------------------------------------
 
-# Player class
-class Player(pygame.sprite.Sprite):
-    def __init__(self):
-        pygame.sprite.Sprite.__init__(self)
-        self.width = PLAYER_WIDTH
-        self.height = PLAYER_HEIGHT
-        image = pygame.image.load(os.path.join('assets', 'sven.png'))
-        self.surface = pygame.transform.scale(image, (self.width, self.height))
-        self.rect = self.surface.get_rect()
-        self.rect.x = WIDTH // 2
-        self.rect.y = HEIGHT // 2
-        # Game logic of player
-        self.direction = 1 # 0 == Left, 1 == Right
-        self.is_falling = True
-        self.is_jumping = False
-        self.just_teleported = False
-
-    # Control player movement
-    def move(self, x_vel, y_vel):
-        self.rect.x += x_vel
-        self.rect.y += y_vel
-
-    # Teleport player to specified portal
-    def teleport(self, portal):
-        if portal.direction == 0:
-            self.rect.topright = (portal.rect.left, portal.rect.top)
-        if portal.direction == 1:
-            self.rect.topleft = (portal.rect.right, portal.rect.top)
-        if portal.direction == 2:
-            self.rect.bottomleft = (portal.rect.centerx, portal.rect.top)
-        if portal.direction == 3:
-            self.rect.topright = (portal.rect.centerx, portal.rect.bottom)
-    
-    # Change which direction the player is looking
-    def flip(self):
-        self.surface = pygame.transform.flip(self.surface, True, False)
-        if self.direction == 0:
-            self.direction = 1
-        else:
-            self.direction = 0
-
-# Portal class
-class Portal():
-    def __init__(self, x, y):
-        self.vert_width = PLAYER_WIDTH // 2
-        self.vert_height = TILE_SIZE * 2
-        self.hor_width = TILE_SIZE * 2
-        self.hor_height = PLAYER_WIDTH // 2
-        self.rect = pygame.Rect(x, y, self.vert_width, self.vert_height)
-        self.direction = 0 # 0 == Left, 1 == Right, 2 = Up, 3 == Down
-
-    # Move portal to block depending on mouse position.
-    # orientation is whether or not the portal is being placed horizonatal (0) or vertical (1)
-    def move(self, mouse_pos, orientation):
-        mx = mouse_pos[0]
-        my = mouse_pos[1]
-        if orientation == 0: # vertical portal
-            self.rect.width = self.vert_width
-            self.rect.height = self.vert_height
-
-            # Floor the mouse position to the nearest even intervals of tile size
-            L = (mx // TILE_SIZE) * TILE_SIZE
-            R = (mx // TILE_SIZE) * TILE_SIZE + TILE_SIZE
-            Y = (my // TILE_SIZE) * TILE_SIZE
-            leftRange = abs(mx - L)
-            rightRange = abs(mx - R)
-
-            # Set portal to either left or right side of block depending on mouse proximity
-            if leftRange <= rightRange:
-                # move the portal to the left side of the block
-                self.rect.left = L
-                self.rect.top = Y
-                self.direction = 0
-            else:
-                # move the portal to the right side of the block
-                self.rect.right = R
-                self.rect.top = Y
-                self.direction = 1
-        else: # horizontal portal
-            self.rect.width = self.hor_width
-            self.rect.height = self.hor_height
-
-            # Floor the mouse position to the nearest even intervals of tile size
-            T = (my // TILE_SIZE) * TILE_SIZE
-            B = (my // TILE_SIZE) * TILE_SIZE + TILE_SIZE
-            X = (mx // TILE_SIZE) * TILE_SIZE
-            topRange = abs(my - T)
-            bottomRange = abs(my - B)
-
-            if topRange <= bottomRange:
-                # move portal to top of blocks
-                self.rect.top = T
-                self.rect.left = X
-                self.direction = 2
-            else:
-                # move portal to bottom of block
-                self.rect.bottom = B
-                self.rect.left = X
-                self.direction = 3
-
-class Button():
-    def __init__(self, x, y):
-        self.width = TILE_SIZE*2
-        self.height = TILE_SIZE
-        self.image = pygame.image.load(os.path.join('assets', 'button.png'))
-        self.surface = pygame.transform.scale(self.image, (self.width, self.height))
-        self.rect = self.surface.get_rect()
-        self.rect.bottomleft = (x, y)
-        self.activated = False
-
-class Cube():
-    def __init__(self, x, y):
-        self.width = TILE_SIZE
-        self.height = TILE_SIZE
-        self.image = pygame.image.load(os.path.join('assets', 'cube.png'))
-        self.surface = pygame.transform.scale(self.image, (self.width, self.height))
-        self.rect = self.surface.get_rect()
-        self.rect.bottomleft = (x, y)
-        self.held = False
-        self.is_falling = False
-
-    def move(self, player):
-        # if player facing left
-        if player.direction == 0:
-            self.rect.right = player.rect.left
-            self.rect.centery = player.rect.centery
-        if player.direction == 1:
-            self.rect.left = player.rect.right
-            self.rect.centery = player.rect.centery
 
 # loads the world and collision maps
 def load_maps():
@@ -316,14 +189,14 @@ def jump(player):
 
 # should any objects be falling?
 # something in here causing some COLLISIONNNNNN issues
-def check_gravity(obj):
+def check_gravity(sprite):
     # if y is not colliding with world_map in the y direction, decrement height
-    y = obj.rect.bottom
-    if y < HEIGHT and block_y_collision(obj.rect.x, y):
-        obj.is_falling = False
-    if y+2 < HEIGHT and not block_y_collision(obj.rect.x, y+2):
-        obj.is_falling = True
-        obj.rect.y += 2
+    y = sprite.rect.bottom
+    if y < HEIGHT and block_y_collision(sprite.rect.x, y):
+        sprite.is_falling = False
+    if y+2 < HEIGHT and not block_y_collision(sprite.rect.x, y+2):
+        sprite.is_falling = True
+        sprite.rect.y += 2
 
 # draws the map
 def draw_map():
@@ -367,18 +240,14 @@ def main():
     # Init maps
     load_maps()
 
-    # Init Player(pygame.sprite.Sprite)
-    player = Player()
+    # Init Sprites
+    player = sp.Player()
+    cube = sp.Cube(TILE_SIZE*3, TILE_SIZE*3)
 
-    # Init Portal(x, y)
-    blue = Portal(0, 0)
-    orange = Portal(0, 120)
-
-    # Init Button(x, y)
-    button = Button(TILE_SIZE*2, TILE_SIZE*9)
-
-    # Init Cube(x, y)
-    cube = Cube(TILE_SIZE*3, TILE_SIZE*3)
+    # Init Objects
+    blue = ob.Portal(0, 0)
+    orange = ob.Portal(0, 120)
+    button = ob.Button(TILE_SIZE*2, TILE_SIZE*9)
     
     # game loop
     clock = pygame.time.Clock()
@@ -418,9 +287,7 @@ def main():
                     cube.held = False
                 else:
                     cube.held = True
-                
-
-
+ 
             # If the player jumps
             if keys_pressed[pygame.K_SPACE]:
                 player.is_jumping = True
