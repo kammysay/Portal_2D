@@ -7,7 +7,7 @@ WIDTH, HEIGHT = 1152, 704 #  must be multiples of 64
 # game logic
 TILE_SIZE = 64
 VEL = 8
-JUMP_VEL = 30
+JUMP_VEL = 24
 
 # Player class
 class Player(pygame.sprite.Sprite):
@@ -22,7 +22,6 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = HEIGHT // 2
         # Game logic of player
         self.direction = 1 # 0 == Left, 1 == Right
-        self.is_falling = True
         self.is_jumping = False
         self.just_teleported = False
 
@@ -31,6 +30,14 @@ class Player(pygame.sprite.Sprite):
         self.rect.x += x_vel
         self.rect.y += y_vel
 
+    # Drag player down
+    def gravity(self):
+        self.rect.bottom += VEL
+
+    # the player wants to jump
+    def jump(self):
+        self.rect.top -= JUMP_VEL
+
     # Teleport player to specified portal
     def teleport(self, portal):
         if portal.direction == 0:
@@ -38,9 +45,11 @@ class Player(pygame.sprite.Sprite):
         if portal.direction == 1:
             self.rect.topleft = (portal.rect.right, portal.rect.top)
         if portal.direction == 2:
-            self.rect.bottomleft = (portal.rect.centerx, portal.rect.top)
+            self.rect.centerx = portal.rect.centerx
+            self.rect.bottom = portal.rect.top
         if portal.direction == 3:
-            self.rect.topright = (portal.rect.centerx, portal.rect.bottom)
+            self.rect.centerx = portal.rect.centerx
+            self.rect.top = portal.rect.bottom
     
     # Change which direction the player is looking
     def flip(self):
@@ -72,3 +81,20 @@ class Cube():
         if player.direction == 1:
             self.rect.left = player.rect.right
             self.rect.centery = player.rect.centery
+
+    # Drag sprite down
+    def gravity(self):
+        self.rect.bottom += VEL
+
+    # Teleport cube to specified portal
+    def teleport(self, portal):
+        if portal.direction == 0:
+            self.rect.topright = (portal.rect.left, portal.rect.top)
+        if portal.direction == 1:
+            self.rect.topleft = (portal.rect.right, portal.rect.top)
+        if portal.direction == 2:
+            self.rect.centerx = portal.rect.centerx
+            self.rect.bottom = portal.rect.top
+        if portal.direction == 3:
+            self.rect.centerx = portal.rect.centerx
+            self.rect.top = portal.rect.bottom

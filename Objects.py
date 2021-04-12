@@ -18,6 +18,13 @@ class Portal():
         self.rect = pygame.Rect(x, y, self.vert_width, self.vert_height)
         self.direction = 0 # 0 == Left, 1 == Right, 2 = Up, 3 == Down
 
+    # Detect if sprite is colliding with a portal
+    def collision(self, x, y):
+        if x >= self.rect.left and x <= self.rect.right and y >= self.rect.top and y <= self.rect.bottom:
+                return True
+        else:
+            return False
+
     # Move portal to block depending on mouse position.
     # orientation is whether or not the portal is being placed horizonatal (0) or vertical (1)
     def move(self, mouse_pos, orientation):
@@ -72,8 +79,36 @@ class Button():
     def __init__(self, x, y):
         self.width = TILE_SIZE*2
         self.height = TILE_SIZE
-        self.image = pygame.image.load(os.path.join('assets', 'button.png'))
-        self.surface = pygame.transform.scale(self.image, (self.width, self.height))
-        self.rect = self.surface.get_rect()
+        self.x = x
+        self.y = y
+
+        self.image_off = pygame.image.load(os.path.join('assets', 'button_off.png'))
+        self.image_on = pygame.image.load(os.path.join('assets', 'button_on.png'))
+        self.surface_off = pygame.transform.scale(self.image_off, (self.width, self.height))
+        self.surface_on = pygame.transform.scale(self.image_on, (self.width, self.height))
+        self.surface = self.surface_off
+        self.rect = self.surface_off.get_rect()
         self.rect.bottomleft = (x, y)
+
         self.activated = False
+
+    # Turn button "on" or "off" (change the image)
+    def flip_state(self):
+        if self.activated == False:
+            self.activated = True
+            self.surface = self.surface_on
+        else:
+            self.activated = False
+            self.surface = self.surface_off
+        self.rect = self.surface.get_rect()
+        self.rect.bottomleft = (self.x, self.y)
+
+    # Detect if sprite collided with button
+    def collision(self, sprite):
+        x = sprite.rect.centerx
+        y = sprite.rect.bottom
+
+        if (x >= self.rect.left or x <= self.rect.right) and (y <= self.rect.bottom or y >= self.rect.top):
+            return True
+        else:
+            return False
