@@ -70,6 +70,7 @@ class Cube():
         self.rect.bottomleft = (x, y)
         self.held = False
         self.is_falling = False
+        self.on_button = False
 
     # Move the cube with the player
     def move(self, player):
@@ -98,3 +99,8 @@ class Cube():
         if portal.direction == 3:
             self.rect.centerx = portal.rect.centerx
             self.rect.top = portal.rect.bottom
+
+    # Set the cube to appear directly on top of the button
+    def snap_to_button(self, button):
+        self.rect.centerx = button.rect.centerx
+        self.rect.bottom = button.rect.centery

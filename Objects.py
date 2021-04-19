@@ -92,7 +92,27 @@ class Button():
 
         self.activated = False
 
-    # Turn button "on" or "off" (change the image)
+    # Detect if sprite collided with button
+    def collision(self, sprite):
+        x = sprite.rect.centerx
+        y = sprite.rect.bottom
+
+        if x >= self.rect.left and x <= self.rect.right and y >= self.rect.top and y <= self.rect.bottom:
+            return True
+        else:
+            return False
+
+    # Turn button on
+    def button_on(self):
+        if self.activated == False:
+            self.flip_state()
+
+    # Turn button off
+    def button_off(self):
+        if self.activated == True:
+            self.flip_state()
+
+    # Turn button "on" or "off" (change the image and activation status)
     def flip_state(self):
         if self.activated == False:
             self.activated = True
@@ -102,13 +122,3 @@ class Button():
             self.surface = self.surface_off
         self.rect = self.surface.get_rect()
         self.rect.bottomleft = (self.x, self.y)
-
-    # Detect if sprite collided with button
-    def collision(self, sprite):
-        x = sprite.rect.centerx
-        y = sprite.rect.bottom
-
-        if (x >= self.rect.left or x <= self.rect.right) and (y <= self.rect.bottom or y >= self.rect.top):
-            return True
-        else:
-            return False

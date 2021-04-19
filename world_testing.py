@@ -30,6 +30,7 @@ world_map = []
 collision_map = []
 
 # assets
+BACKGROUND = pygame.image.load(os.path.join('assets', 'background.png'))
 BLOCK_IMG = pygame.image.load(os.path.join('assets', 'ground_texture_1.png'))
 BLOCK_RECT = pygame.transform.scale(BLOCK_IMG, (TILE_SIZE, TILE_SIZE))
 
@@ -161,11 +162,6 @@ def move_player(keys_pressed, player, blue, orange):
         if not block_x_collision(player.rect.right, player.rect.y):
             player.move(VEL, 0)
 
-# The player wants to jump
-def jump(player):
-    if not block_y_collision(player.rect.x, player.rect.top+1):
-        player.jump()
-
 # Check if sprite should be falling
 def check_gravity(sprite, blue, orange):
     y = sprite.rect.bottom
@@ -178,7 +174,7 @@ def check_gravity(sprite, blue, orange):
 
 # Draws the map
 def draw_map():
-    WIN.fill(BLUE_BACK)
+    # WIN.fill(BLUE_BACK)
     row_count = 0
     for row in world_map:
         col_count = 0
@@ -197,6 +193,7 @@ def draw_map():
 
 # Draw necessary things to the screen
 def draw_window(player, blue, orange, button, cube):
+    WIN.blit(BACKGROUND, (0,0))
     draw_map()
     pygame.draw.rect(WIN, BLUE, blue)
     pygame.draw.rect(WIN, ORANGE, orange)
@@ -220,7 +217,7 @@ def main():
 
     # Init Sprites
     player = sp.Player()
-    cube = sp.Cube(TILE_SIZE*3, TILE_SIZE*3)
+    cube = sp.Cube(TILE_SIZE*6, TILE_SIZE*3)
 
     # Init Objects
     blue = ob.Portal(0, 0)
@@ -242,8 +239,8 @@ def main():
             # Quit
             if event.type == pygame.QUIT or keys_pressed[pygame.K_ESCAPE]:
                 pygame.quit()
-            
-            # move portals if player clicks mouse button
+             
+            # Move portals if player clicks mouse button
             if event.type == pygame.MOUSEBUTTONDOWN:
                 move_portal(blue, orange)
 
@@ -260,20 +257,33 @@ def main():
             if keys_pressed[pygame.K_SPACE]:
                 player.is_jumping = True
 
+
         # Player movements
-        move_player(keys_pressed, player, blue, orange)
         if player.is_jumping:
-            jump(player)
+            if not block_y_collision(player.rect.x, player.rect.top+1):
+                player.jump()
             jump_count -= 1
             if jump_count == 0:
                 player.is_jumping = False
                 jump_count = 5
+        move_player(keys_pressed, player, blue, orange)
+        
         check_gravity(player, blue, orange)
         
+        # Check if cube collided with button
+        if button.collision(cube) == True:
+            cube.on_button = True
+            button.button_on()
+        elif button.collision(cube) == False:
+            cube.on_button = False
+            button.button_off()
+
         # Cube movements
         if cube.held:
             cube.move(player)
-        if not cube.held:
+        elif cube.on_button:
+            cube.snap_to_button(button)
+        elif not cube.held and not cube.on_button:
             check_gravity(cube, blue, orange)
 
         # Update window
