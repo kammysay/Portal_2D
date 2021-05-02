@@ -11,15 +11,18 @@ JUMP_VEL = 24
 
 # Player class
 class Player(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, x_start, y_start):
+        # General player informatio
         pygame.sprite.Sprite.__init__(self)
         self.width = TILE_SIZE // 2
         self.height = TILE_SIZE * 2
+        self.x_start = x_start
+        self.y_start = y_start
+        # Sprite information
         image = pygame.image.load(os.path.join('assets', 'sven.png'))
         self.surface = pygame.transform.scale(image, (self.width, self.height))
         self.rect = self.surface.get_rect()
-        self.rect.x = WIDTH // 2
-        self.rect.y = HEIGHT // 2
+        self.rect.bottomleft = (self.x_start, self.y_start)
         # Game logic of player
         self.direction = 1 # 0 == Left, 1 == Right
         self.is_jumping = False
@@ -34,7 +37,7 @@ class Player(pygame.sprite.Sprite):
     def gravity(self):
         self.rect.bottom += VEL
 
-    # the player wants to jump
+    # The player wants to jump
     def jump(self):
         self.rect.top -= JUMP_VEL
 
@@ -59,15 +62,20 @@ class Player(pygame.sprite.Sprite):
         else:
             self.direction = 0
 
+    # Reset coordinates to starting position
+    def reset(self):
+        self.rect.bottomleft = (self.x_start, self.y_start)
 
 class Cube():
-    def __init__(self, x, y):
+    def __init__(self, x_start, y_start):
         self.width = TILE_SIZE
         self.height = TILE_SIZE
+        self.x_start = x_start
+        self.y_start = y_start
         self.image = pygame.image.load(os.path.join('assets', 'cube.png'))
         self.surface = pygame.transform.scale(self.image, (self.width, self.height))
         self.rect = self.surface.get_rect()
-        self.rect.bottomleft = (x, y)
+        self.rect.bottomleft = (self.x_start, self.y_start)
         self.held = False
         self.is_falling = False
         self.on_button = False
@@ -104,3 +112,58 @@ class Cube():
     def snap_to_button(self, button):
         self.rect.centerx = button.rect.centerx
         self.rect.bottom = button.rect.centery
+
+    # Reset coordinates to starting position
+    def reset(self):
+        self.rect.bottomleft = (self.x_start, self.y_start)
+
+class Turret():
+    def __int__(self, x, y):
+        self.width = TILE_SIZE
+        self.height = TILE_SIZE*2
+        image = pygame.load.image(os.path.join('assets', 'turret.png'))
+        self.surface = pygame.transform.scale(image, (self.width, self.height))
+        self.rect = surface.get_rect()
+        self.rect.bottomleft = (x, y)
+        self.held
+        self.is_falling = False
+
+    # Move the turret with the player
+    def move(self, player):
+        # if player facing left
+        if player.direction == 0:
+            self.rect.right = player.rect.left
+            self.rect.centery = player.rect.centery
+        # if player facing right
+        if player.direction == 1:
+            self.rect.left = player.rect.right
+            self.rect.centery = player.rect.centery
+
+    # Drag sprite down
+    def gravity(self):
+        self.rect.bottom += VEL
+
+    # Teleport turret to specified portal
+    def teleport(self, portal):
+        if portal.direction == 0:
+            self.rect.topright = (portal.rect.left, portal.rect.top)
+        if portal.direction == 1:
+            self.rect.topleft = (portal.rect.right, portal.rect.top)
+        if portal.direction == 2:
+            self.rect.centerx = portal.rect.centerx
+            self.rect.bottom = portal.rect.top
+        if portal.direction == 3:
+            self.rect.centerx = portal.rect.centerx
+            self.rect.top = portal.rect.bottom
+
+    # Shoot at the player if they are within range/if turret can see them
+    def shoot_at_player(self, player):
+        # Player x and y
+        px = player.rect.centerx
+        py = player.rect.centery
+
+        # Is player within range?
+        distance_x = abs(px - self.rect.centerx)
+        distance_y = abs(py - self.rect.centery)
+        if distance_x <= 400 and distance_y <= 200:
+            fire = True

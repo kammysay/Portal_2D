@@ -60,7 +60,7 @@ def load_maps():
         collision_map.append(elements)
     f.close()
 
-    # Set any non 0 or 2 block to be 1
+    # Set any non 0 or 2 block to be 1 in collision map
     i = 0
     for line in collision_map:
         j = 0
@@ -128,6 +128,13 @@ def block_y_collision(x, y):
     else:
         return False
 
+def sludge_collision(sprite):
+    x = sprite.rect.x // TILE_SIZE
+    y = sprite.rect.bottom // TILE_SIZE
+
+    if world_map[y][x] == '2':
+        sprite.reset()
+
 # Move the player in the x and y directions
 def move_player(keys_pressed, player, blue, orange):
     # Left movement
@@ -164,13 +171,17 @@ def move_player(keys_pressed, player, blue, orange):
 
 # Check if sprite should be falling
 def check_gravity(sprite, blue, orange):
+    # Checking for portal collisions in y plane here since
+    # this is the only place we move in the y direction (sans jumping)
+    if blue.collision(sprite.rect.centerx, sprite.rect.bottom+1):
+            sprite.teleport(orange)
+    if orange.collision(sprite.rect.centerx, sprite.rect.bottom+1):
+        sprite.teleport(blue)
+    
+    # Check if we need to use gravity
     y = sprite.rect.bottom
     if y+2 < HEIGHT and not block_y_collision(sprite.rect.x, y+2):
         sprite.gravity()
-        if blue.collision(sprite.rect.centerx, sprite.rect.bottom+1):
-            sprite.teleport(orange)
-        if orange.collision(sprite.rect.centerx, sprite.rect.bottom+1):
-            sprite.teleport(blue)
 
 # Draws the map
 def draw_map():
@@ -202,22 +213,13 @@ def draw_window(player, blue, orange, button, cube):
     WIN.blit(player.surface, (player.rect.x , player.rect.y))
     pygame.display.update()
 
-def debug(player, blue, orange):
-    # Draw a grid over the screen
-    i = 0
-    while i < TILES_Y:
-        x = i * TILES_Y
-        grid_line = pygame.Rect(x, 0, 10, 10)
-        pygame.draw.rect(WIN, WHITE, grid_line)
-        i += 1
-
 def main():
     # Init maps
     load_maps()
 
     # Init Sprites
-    player = sp.Player()
-    cube = sp.Cube(TILE_SIZE*6, TILE_SIZE*3)
+    player = sp.Player(TILE_SIZE*3, TILE_SIZE*3)
+    cube = sp.Cube(TILE_SIZE*10, TILE_SIZE*3)
 
     # Init Objects
     blue = ob.Portal(0, 0)
@@ -227,7 +229,7 @@ def main():
     # Used to let player jump throughout multiple frames
     jump_count = 5
     
-    # game loop
+    # Game Loop
     clock = pygame.time.Clock()
     run = True
     while run:
@@ -269,6 +271,7 @@ def main():
         move_player(keys_pressed, player, blue, orange)
         
         check_gravity(player, blue, orange)
+        sludge_collision(player)
         
         # Check if cube collided with button
         if button.collision(cube) == True:
@@ -285,6 +288,7 @@ def main():
             cube.snap_to_button(button)
         elif not cube.held and not cube.on_button:
             check_gravity(cube, blue, orange)
+            sludge_collision(cube)
 
         # Update window
         draw_window(player, blue, orange, button, cube)
