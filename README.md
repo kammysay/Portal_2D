@@ -1,9 +1,13 @@
-# **Portal 2D**
-Portal 2D is a platform based game made using Python's pygame library inspired by the Portal game series.
+<p align="center">
+<img  width="450px" src="logo.png"></img>
+</p>
+<h1 align="center">
+A 2D platformer based on the Portal game franchise
+</h1>
+
+Portal 2D is a 2D platform game based on Valve's Portal game series. This is written in Python and uses the pygame library.
 
 ## **The Player**
-
----
 
 The player class consists of location and game logic information and several useful methods such as move() and flip(). The player is a rectangle that moves on the screen (referred to as a sprite) and collides with the map and certain objects. The player intentionally is unable to collide with the Cubes or Buttons.
 
@@ -11,7 +15,6 @@ The Player class can be found in Sprites.py
 
 ## **Portal Logic**
 
----
 The portals were troublesome to say the least. The logic itself is simple enough, when a certain point of the player collides with a portal the program checks the direction of the opposite portal (left, right, up, down) and will teleport the player to the appropriate coordinates of that portal.
 
 The portals had to be made to only be placed on exact intervals of TILE_SIZE, else when the player teleported, the player's rect would be out of line, causing collision issues including the playing getting stuck in blocks and crashing when touching the edge of the map.
@@ -24,7 +27,6 @@ The Portal class can be found in Objects.py
 
 
 ## **Map System**
----
 The game map system consists of two maps for two different purposes, each loaded from the same file. The maps are 2D lists of numbers. The maps are text files stored in the maps subdirectory consisting of numbers 0 - 4 and are manually typed.
 ### **World Map**
 This is a direct copy of the file it is loaded from, and is used for texture information in the game.  Tiles are drawn based on the numbers in world_map.
@@ -39,7 +41,6 @@ This map is used for detecting collisions between the map and sprites. Every ele
 Both maps are contained directly in the world_testing.py file and are not treated as classes.
 
 ## **Companion Cube and Buttons**
----
 
 *"The Enrichment Center reminds you that the Weighted Companion Cube will never threaten to stab you and, in fact, cannot speak."*
 
