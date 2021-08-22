@@ -43,8 +43,9 @@ PORTAL_WALL_RECT = pygame.transform.scale(PORTAL_WALL_IMG, (TILE_SIZE, TILE_SIZE
 
 
 # Loads the world and collision maps
-def load_maps():
-    file_location = os.path.join('maps', '1.txt')
+def load_maps(level):
+    file_name = str(level) + ".txt"
+    file_location = os.path.join('maps', file_name)
 
     # Load world_map
     f = open(file_location)
@@ -213,19 +214,9 @@ def draw_window(player, blue, orange, button, cube):
     WIN.blit(player.surface, (player.rect.x , player.rect.y))
     pygame.display.update()
 
-def main():
-    # Init maps
-    load_maps()
 
-    # Init Sprites
-    player = sp.Player(TILE_SIZE*3, TILE_SIZE*3)
-    cube = sp.Cube(TILE_SIZE*10, TILE_SIZE*3)
-
-    # Init Objects
-    blue = ob.Portal(0, 0)
-    orange = ob.Portal(0, 120)
-    button = ob.Button(TILE_SIZE*2, TILE_SIZE*9)
-
+# Contains the actual game loop and game events, takes in all sprites and objects as arguments
+def game_loop(player, cube, blue, orange, button):
     # Used to let player jump throughout multiple frames
     jump_count = 5
     
@@ -241,6 +232,10 @@ def main():
             # Quit
             if event.type == pygame.QUIT or keys_pressed[pygame.K_ESCAPE]:
                 pygame.quit()
+            
+            # If user presses Q, return to level selector
+            if keys_pressed[pygame.K_q]:
+                run = False
              
             # Move portals if player clicks mouse button
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -292,6 +287,55 @@ def main():
 
         # Update window
         draw_window(player, blue, orange, button, cube)
+
+# The level functions define where sprites and objects will initially appear on the screen.
+# Each level has a corresponding map in the /maps subdirectory
+def level_1():
+    load_maps(1)
+    # Init Sprites
+    player = sp.Player(TILE_SIZE*3, TILE_SIZE*3)
+    cube = sp.Cube(TILE_SIZE*10, TILE_SIZE*3)
+
+    # Init Objects
+    blue = ob.Portal(0, 0)
+    orange = ob.Portal(0, 120)
+    button = ob.Button(TILE_SIZE*2, TILE_SIZE*9)
+
+    game_loop(player, cube, blue, orange, button)
+
+def level_2():
+    load_maps(2)
+    # Init Sprites
+    player = sp.Player(TILE_SIZE*2, TILE_SIZE*3)
+    cube = sp.Cube(TILE_SIZE*14, TILE_SIZE*7)
+
+    # Init Objects
+    blue = ob.Portal(0, 0)
+    orange = ob.Portal(0, 120)
+    button = ob.Button(TILE_SIZE*8, TILE_SIZE*7)
+
+    game_loop(player, cube, blue, orange, button)
+
+def level_3():
+    load_maps(3)
+    # Init Sprites
+    player = sp.Player(TILE_SIZE*3, TILE_SIZE*3)
+    cube = sp.Cube(TILE_SIZE*2, TILE_SIZE*7)
+
+    # Init Objects
+    blue = ob.Portal(0, 0)
+    orange = ob.Portal(0, 120)
+    button = ob.Button(TILE_SIZE*15, TILE_SIZE*3)
+
+    game_loop(player, cube, blue, orange, button)
+
+# Main function runs the level selector
+def main(level):
+    # Run the level selection screen for the entire run of the program
+    # When a user finishes a level, it lets them select a new one
+    while(True):
+        # Init maps
+        load_maps(level)
         
 if __name__ == "__main__":
     main()
