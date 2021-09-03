@@ -1,3 +1,5 @@
+# This file contains game objects (non-moving items)
+
 import os
 import pygame
 

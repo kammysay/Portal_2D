@@ -28,6 +28,19 @@ LOGO_RECT = LOGO.get_rect();
 LOGO_RECT.centerx = WIDTH // 2
 LOGO_RECT.y = TILE_SIZE
 
+# Left x coordinate of buttons
+B1_L = TILE_SIZE*4
+B2_L = TILE_SIZE*8
+B3_L = TILE_SIZE*12
+# Top y coordinate of buttons
+BT = TILE_SIZE*4
+# Width and Height of buttons
+BW, BH = TILE_SIZE*2, TILE_SIZE*2
+
+# Quit button
+BE_L = TILE_SIZE*(TILES_X-2)
+BE_T = TILE_SIZE*(TILES_Y-2)
+
 # Text
 pygame.font.init()
 FONT = pygame.font.Font('freesansbold.ttf', 24)
@@ -61,24 +74,10 @@ L3_TEXT = FONT.render('L3', True, ORANGE)
 L3_RECT = L1_TEXT.get_rect()
 L3_RECT.centerx = TILE_SIZE*13
 L3_RECT.centery = TILE_SIZE*5
-
-# Left x coordinate of buttons
-B1_L = TILE_SIZE*4
-B2_L = TILE_SIZE*8
-B3_L = TILE_SIZE*12
-# Top y coordinate of buttons
-BT = TILE_SIZE*4
-# Width and Height of buttons
-BW, BH = TILE_SIZE*2, TILE_SIZE*2
-
-# Quit button
-BE_L = TILE_SIZE*(TILES_X-2)
-BE_T = TILE_SIZE*(TILES_Y-2)
 # ------------------------------------------
 
 # Select a level based on the level selection
 def select_level(level):
-    # There's probably a better way to do this, but when there's only 3 levels, this is probably faster
     if level == 1:
         wt.level_1()
     if level == 2:

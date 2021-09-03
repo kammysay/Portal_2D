@@ -1,4 +1,5 @@
-# Portal 2D - a 2D Python game inspired by the Portal series
+# Portal 2D - a 2D Python game inspired by the Portal series.
+# This file is the engine of the program.
 
 import os
 import pygame
@@ -11,6 +12,8 @@ WIDTH, HEIGHT = 1152, 704 #  must be multiples of 64
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Portal 2D: World Testing")
 FPS = 60
+pygame.font.init()  # for using text
+FONT = pygame.font.SysFont('comicsans', 100)
 
 # colors
 WHITE = (255, 255, 255)
@@ -39,6 +42,13 @@ SLUDGE_RECT = pygame.transform.scale(SLUDGE_IMG, (TILE_SIZE, TILE_SIZE))
 
 PORTAL_WALL_IMG = pygame.image.load(os.path.join('assets', 'portal_wall.png'))
 PORTAL_WALL_RECT = pygame.transform.scale(PORTAL_WALL_IMG, (TILE_SIZE, TILE_SIZE))
+
+# Activated portal wall - allows portals to be placed on it when button is active
+INACTIVE_PORTAL_WALL_IMG = pygame.image.load(os.path.join('assets', 'inactive_portal_wall.png'))
+INACTIVE_PORTAL_WALL_RECT = pygame.transform.scale(INACTIVE_PORTAL_WALL_IMG, (TILE_SIZE, TILE_SIZE))
+
+END_DOOR_IMG = pygame.image.load(os.path.join('assets', 'end_wall.png'))
+END_DOOR_RECT = pygame.transform.scale(END_DOOR_IMG, (TILE_SIZE, TILE_SIZE))
 # ------------------------------------------
 
 
@@ -66,30 +76,39 @@ def load_maps(level):
     for line in collision_map:
         j = 0
         for element in line:
-            # if element isn't empty, or a sludge block
-            if element != '0' and element != '2':
+            # if element isn't empty, a sludge block, or the end door
+            if element != '0' and element != '2' and element != '6':
                 collision_map[i][j] = '1'
             j += 1
         i += 1
 
 # Move portal depending on mouse position
-def move_portal(blue, orange):
+def move_portal(blue, orange, wall_active):
     mouse_click = pygame.mouse.get_pressed()
     mouse_pos = pygame.mouse.get_pos()
     mx = mouse_pos[0] // TILE_SIZE
     my = mouse_pos[1] // TILE_SIZE
+
     # Portal placed on wall
     if world_map[my][mx] == '3':
         if mouse_click[0]: # left mouse button
             blue.move(mouse_pos, 0)
         if mouse_click[2]: # right mouse button
             orange.move(mouse_pos, 0)
+
     # Portal placed on floor
     if world_map[my][mx] == '4':
         if mouse_click[0]: # left mouse button
             blue.move(mouse_pos, 1)
         if mouse_click[2]: # right mouse button
             orange.move(mouse_pos, 1)
+
+    # Portal placed on activated portal wall
+    if world_map[my][mx] == '5' and wall_active == True:
+        if mouse_click[0]: # left mouse button
+            blue.move(mouse_pos, 0)
+        if mouse_click[2]: # right mouse button
+            orange.move(mouse_pos, 0)
 
 # Check if the player collided with any blocks in x axis (O(1))
 def block_x_collision(x, y):
@@ -129,6 +148,34 @@ def block_y_collision(x, y):
     else:
         return False
 
+# Alert the player that they have beaten the level
+def level_beaten():
+    draw_text = FONT.render("TEST COMPLETE", 1, WHITE)
+    WIN.blit(draw_text, (WIDTH/2- draw_text.get_width()/2, HEIGHT/2 - draw_text.get_height()/2))
+    pygame.display.update()
+    pygame.time.delay(3000)
+
+# Check if the player is at the end of the level door
+def is_level_beaten(player):
+    # Center coordinates on the player sprite
+    x = player.rect.centerx // TILE_SIZE
+    y = player.rect.centery // TILE_SIZE
+
+    # Ensure that no coordinate is out of bounds (index out of range error if we don't do this)
+    if y < 0:
+        y = 0
+    if x < 0:
+        x = 0
+
+    # Check if the coordinates align with end door
+    if world_map[y][x] == '6':
+        # Player has beaten the level, let them know and return
+        level_beaten()
+        return True
+    else:
+        return False
+
+# Check if the player is colliding with the sludge
 def sludge_collision(sprite):
     x = sprite.rect.x // TILE_SIZE
     y = sprite.rect.bottom // TILE_SIZE
@@ -185,7 +232,7 @@ def check_gravity(sprite, blue, orange):
         sprite.gravity()
 
 # Draws the map
-def draw_map():
+def draw_map(wall_active):
     # WIN.fill(BLUE_BACK)
     row_count = 0
     for row in world_map:
@@ -200,13 +247,29 @@ def draw_map():
             elif col == '3' or col == '4':
                 block_rect = pygame.Rect(col_count*TILE_SIZE, row_count*TILE_SIZE, TILE_SIZE, TILE_SIZE)
                 WIN.blit(PORTAL_WALL_RECT, (block_rect.x, block_rect.y))
+
+            # Activated Portal Wall - Draw the proper block type if active
+            elif col =='5':
+                if wall_active == False:
+                    # print(wall_active)
+                    block_rect = pygame.Rect(col_count*TILE_SIZE, row_count*TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                    WIN.blit(INACTIVE_PORTAL_WALL_RECT, (block_rect.x, block_rect.y))
+                if wall_active == True:
+                    # print(wall_active)
+                    block_rect = pygame.Rect(col_count*TILE_SIZE, row_count*TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                    WIN.blit(PORTAL_WALL_RECT, (block_rect.x, block_rect.y))
+
+            elif col == '6':
+                block_rect = pygame.Rect(col_count*TILE_SIZE, row_count*TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                WIN.blit(END_DOOR_RECT, (block_rect.x, block_rect.y))
+        
             col_count += 1
         row_count += 1
 
 # Draw necessary things to the screen
-def draw_window(player, blue, orange, button, cube):
+def draw_window(player, blue, orange, button, cube, wall_active):
     WIN.blit(BACKGROUND, (0,0))
-    draw_map()
+    draw_map(wall_active)
     pygame.draw.rect(WIN, BLUE, blue)
     pygame.draw.rect(WIN, ORANGE, orange)
     WIN.blit(button.surface, (button.rect.x, button.rect.y))
@@ -214,11 +277,17 @@ def draw_window(player, blue, orange, button, cube):
     WIN.blit(player.surface, (player.rect.x , player.rect.y))
     pygame.display.update()
 
+# Reset the global information to ensure selecting a new level does not introduce glitches
+def reset():
+    world_map = []
+    collision_map = []
+    wall_active = False
 
 # Contains the actual game loop and game events, takes in all sprites and objects as arguments
 def game_loop(player, cube, blue, orange, button):
     # Used to let player jump throughout multiple frames
     jump_count = 5
+    wall_active = False
     
     # Game Loop
     clock = pygame.time.Clock()
@@ -235,11 +304,12 @@ def game_loop(player, cube, blue, orange, button):
             
             # If user presses Q, return to level selector
             if keys_pressed[pygame.K_q]:
+                reset()
                 run = False
              
             # Move portals if player clicks mouse button
             if event.type == pygame.MOUSEBUTTONDOWN:
-                move_portal(blue, orange)
+                move_portal(blue, orange, wall_active)
 
             # Player grabs cube 
             cube_x_distance = abs(player.rect.centerx - cube.rect.centerx)
@@ -268,6 +338,7 @@ def game_loop(player, cube, blue, orange, button):
         check_gravity(player, blue, orange)
         sludge_collision(player)
         
+        
         # Check if cube collided with button
         if button.collision(cube) == True:
             cube.on_button = True
@@ -275,6 +346,12 @@ def game_loop(player, cube, blue, orange, button):
         elif button.collision(cube) == False:
             cube.on_button = False
             button.button_off()
+
+        # Determine the state of the button
+        if(button.activated == True):
+            wall_active = True
+        else:
+            wall_active = False
 
         # Cube movements
         if cube.held:
@@ -285,8 +362,11 @@ def game_loop(player, cube, blue, orange, button):
             check_gravity(cube, blue, orange)
             sludge_collision(cube)
 
+        if is_level_beaten(player):
+            return
+
         # Update window
-        draw_window(player, blue, orange, button, cube)
+        draw_window(player, blue, orange, button, cube, wall_active)
 
 # The level functions define where sprites and objects will initially appear on the screen.
 # Each level has a corresponding map in the /maps subdirectory
@@ -297,8 +377,8 @@ def level_1():
     cube = sp.Cube(TILE_SIZE*10, TILE_SIZE*3)
 
     # Init Objects
-    blue = ob.Portal(0, 0)
-    orange = ob.Portal(0, 120)
+    blue = ob.Portal(-120, 0)
+    orange = ob.Portal(-120, 120)
     button = ob.Button(TILE_SIZE*2, TILE_SIZE*9)
 
     game_loop(player, cube, blue, orange, button)
@@ -310,8 +390,8 @@ def level_2():
     cube = sp.Cube(TILE_SIZE*14, TILE_SIZE*7)
 
     # Init Objects
-    blue = ob.Portal(0, 0)
-    orange = ob.Portal(0, 120)
+    blue = ob.Portal(-120, 0)
+    orange = ob.Portal(-120, 120)
     button = ob.Button(TILE_SIZE*8, TILE_SIZE*7)
 
     game_loop(player, cube, blue, orange, button)
@@ -323,19 +403,8 @@ def level_3():
     cube = sp.Cube(TILE_SIZE*2, TILE_SIZE*7)
 
     # Init Objects
-    blue = ob.Portal(0, 0)
-    orange = ob.Portal(0, 120)
+    blue = ob.Portal(-120, 0)
+    orange = ob.Portal(-120, 120)
     button = ob.Button(TILE_SIZE*15, TILE_SIZE*3)
 
     game_loop(player, cube, blue, orange, button)
-
-# Main function runs the level selector
-def main(level):
-    # Run the level selection screen for the entire run of the program
-    # When a user finishes a level, it lets them select a new one
-    while(True):
-        # Init maps
-        load_maps(level)
-        
-if __name__ == "__main__":
-    main()
