@@ -7,9 +7,19 @@ A 2D platformer based on the Portal game franchise
 
 Portal 2D is a 2D platform game based on Valve's Portal game series. This is written in Python and uses the pygame library.
 
+<p align="center">
+<img  width="640px" src="demo_start.jpg"></img>
+</p>
+<p align="center">
+<img  width="640px" src="demo_level.gif"></img>
+</p>
+<p align="center">
+<img  width="640px" src="demo_fall.gif"></img>
+</p>
+
 ## **The Player**
 
-The player class consists of location and game logic information and several useful methods such as move() and flip(). The player is a rectangle that moves on the screen (referred to as a sprite) and collides with the map and certain objects. The player intentionally is unable to collide with the Cubes or Buttons.
+The player class consists of location and movement information. The player is a rectangle that moves on the screen (referred to as a sprite) and collides with the map and certain objects. The player intentionally is unable to collide with the Cubes or Buttons.
 
 The Player class can be found in Sprites.py
 
@@ -23,9 +33,6 @@ Portals can only be placed on portal wall and portal floor/ceiling (3 and 4 in w
 
 The Portal class can be found in Objects.py
 
-*note: the portal system is unfinished*
-
-
 ## **Map System**
 The game map system consists of two maps for two different purposes, each loaded from the same file. The maps are 2D lists of numbers. The maps are text files stored in the maps subdirectory consisting of numbers 0 - 4 and are manually typed.
 ### **World Map**
@@ -35,6 +42,8 @@ This is a direct copy of the file it is loaded from, and is used for texture inf
 * 2 - sludge / water
 * 3 - portal wall (for vertical portals)
 * 4 - portal floor/ceiling (for horizontal portals)
+* 5 - activated portal wall (activated by button on)
+* 6 - end door (level finished when player reaches this)
 ### **Collision Map**
 This map is used for detecting collisions between the map and sprites. Every element in this 2D list is either a 0 (no collision) or a 1 (collision). Any block that isn't a 0 or a 2 (air or water) in world_map will be set to 1 in collision_map (something the player will collide with).
 
