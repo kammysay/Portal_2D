@@ -8,7 +8,7 @@ A 2D platformer based on the Portal game franchise
 Portal 2D is a 2D platform game based on Valve's Portal game series. This is written in Python and uses the pygame library.
 
 <p align="center">
-<img  width="640px" src="demo_start.jpg"></img>
+<img  width="640px" src="demo_start.JPG"></img>
 </p>
 <p align="center">
 <img  width="640px" src="demo_level.gif"></img>
